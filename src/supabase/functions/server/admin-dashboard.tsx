@@ -374,7 +374,7 @@ app.get('/dashboard', async (c)=>{
         color: '#14b8a6' // teal
       },
       {
-        name: 'Ürün Alımı',
+        name: 'Ürün Alımı (-)',
         value: sellData?.reduce((sum, s)=>sum + (s.admin_offer_price || 0), 0) || 0,
         color: '#a855f7' // purple
       }

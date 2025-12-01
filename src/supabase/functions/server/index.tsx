@@ -1464,6 +1464,20 @@ app.post("/make-server-0f4d2485/orders", async (c) => {
       order_number: orderNumber,
       customer_id: customerId,
       customer_info: customer,
+      items: items.map((item: any) => ({
+        id: item.id,
+        title: item.title || item.name || 'Ürün',
+        price: item.price,
+        quantity: item.quantity || 1,
+        image: item.image || '',
+        condition: item.condition || '',
+        product_snapshot: {
+          title: item.title || item.name || 'Ürün',
+          image: item.image || '',
+          condition: item.condition || '',
+        }
+      })),
+      itemsCount: items.length,
       status: initialStatus,
       payment_method: payment.method,
       delivery_method: delivery.method,
@@ -1760,6 +1774,102 @@ app.put("/make-server-0f4d2485/orders/:orderId/status", async (c) => {
 // ==========================================
 
 // GET /admin/orders - Admin için tüm siparişleri getir (POSTGRES)
+
+// 🔧 MIGRATION: Fix existing KV orders - add items from order_items:orderId
+app.post("/make-server-0f4d2485/admin/fix-kv-orders", async (c) => {
+  try {
+    console.log('[FIX-KV-ORDERS] 🔧 Starting migration...');
+    
+    // Get all KV orders
+    const kvOrders = await kv.getByPrefix('order:');
+    console.log(`[FIX-KV-ORDERS] Found ${kvOrders?.length || 0} KV orders`);
+    
+    let fixed = 0;
+    let skipped = 0;
+    let notFound = 0;
+    
+    for (const kvOrder of kvOrders || []) {
+      // Skip if already has items
+      if (kvOrder.items && kvOrder.items.length > 0) {
+        console.log(`[FIX-KV-ORDERS] ⏭️ Skipping ${kvOrder.order_number} - already has items`);
+        skipped++;
+        continue;
+      }
+      
+      // ✅ Try to get items from KV Store using order_items:orderId key
+      const orderItems = await kv.get(`order_items:${kvOrder.id}`);
+      
+      if (orderItems && orderItems.length > 0) {
+        // Format items with product_snapshot structure
+        kvOrder.items = orderItems.map((item: any) => ({
+          id: item.product_id,
+          title: item.product_snapshot?.title || 'Ürün',
+          price: item.price,
+          quantity: item.quantity || 1,
+          image: item.product_snapshot?.image || '',
+          condition: item.product_snapshot?.condition || '',
+          product_snapshot: item.product_snapshot || {
+            title: item.product_snapshot?.title || 'Ürün',
+            image: item.product_snapshot?.image || '',
+            condition: item.product_snapshot?.condition || '',
+          }
+        }));
+        kvOrder.itemsCount = orderItems.length;
+        
+        // Save back to KV
+        await kv.set(`order:${kvOrder.id}`, kvOrder);
+        if (kvOrder.order_number) {
+          await kv.set(`order_by_number:${kvOrder.order_number}`, kvOrder);
+        }
+        
+        fixed++;
+        console.log(`[FIX-KV-ORDERS] ✅ Fixed ${kvOrder.order_number} - added ${orderItems.length} items from order_items:${kvOrder.id}`);
+      } else {
+        notFound++;
+        console.log(`[FIX-KV-ORDERS] ❌ No items found for ${kvOrder.order_number} in order_items:${kvOrder.id}`);
+      }
+    }
+    
+    return c.json({ 
+      success: true, 
+      message: `Fixed ${fixed} orders, skipped ${skipped}, not found ${notFound}`,
+      fixed,
+      skipped,
+      notFound
+    });
+  } catch (e: any) {
+    console.error('[FIX-KV-ORDERS] Error:', e);
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+// 🔍 DEBUG: Check order_items table
+app.get("/make-server-0f4d2485/debug/order-items", async (c) => {
+  try {
+    const { data: orders } = await supabase.from('orders').select('*').limit(5);
+    const { data: items } = await supabase.from('order_items').select('*').limit(10);
+    const { data: customers } = await supabase.from('customers').select('*').limit(5);
+    
+    // Get KV orders
+    const kvOrders = await kv.getByPrefix('order:');
+    const sampleKvOrder = kvOrders?.[0];
+    
+    return c.json({
+      orders_count: orders?.length || 0,
+      items_count: items?.length || 0,
+      customers_count: customers?.length || 0,
+      kv_orders_count: kvOrders?.length || 0,
+      sample_order: orders?.[0] || null,
+      sample_items: items || [],
+      sample_customer: customers?.[0] || null,
+      sample_kv_order: sampleKvOrder || null,
+      sample_kv_order_items: sampleKvOrder?.items || []
+    });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
 app.get("/make-server-0f4d2485/admin/orders", async (c) => {
   try {
     console.log('[ADMIN-ORDERS] 🔍 Starting admin orders request');
@@ -1931,17 +2041,44 @@ app.get("/make-server-0f4d2485/admin/orders", async (c) => {
       // Get status history from KV
       const statusHistory = await kv.get(`order_status_history:${kvOrder.id}`);
       
+      // ✅ Convert customer_info to customer object for frontend compatibility
+      const customerInfo = kvOrder.customer_info || kvOrder.customerInfo;
+      const customerObj = customerInfo ? {
+        name: customerInfo.name || 'Bilinmeyen',
+        email: customerInfo.email || '',
+        phone: customerInfo.phone || '',
+        city: customerInfo.city || '',
+        district: customerInfo.district || '',
+        neighborhood: customerInfo.neighborhood || '',
+        street: customerInfo.street || '',
+        building_no: customerInfo.building_no || '',
+        apartment_no: customerInfo.apartment_no || '',
+      } : (kvOrder.customer || null);
+      
+      // ✅ Format items to have product_snapshot structure
+      const formattedItems = (kvOrder.items || []).map((item: any) => ({
+        ...item,
+        product_snapshot: item.product_snapshot || {
+          title: item.product_title || item.title || 'Ürün',
+          image: item.product_image || item.image || 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=200',
+          condition: item.product_condition || item.condition || '',
+        }
+      }));
+      
       // Normalize field names: camelCase -> snake_case
       const normalized = {
         id: kvOrder.id,
         order_number: kvOrder.order_number || kvOrder.orderNumber,
         customer_id: kvOrder.customer_id || kvOrder.customerId,
-        customer: kvOrder.customer || null,
-        customer_info: kvOrder.customer_info || kvOrder.customerInfo || null,
-        items: kvOrder.items || [],
+        customer: customerObj,
+        items: formattedItems,
+        itemsCount: formattedItems.length,
         total: kvOrder.total || kvOrder.totalAmount || 0,
+        subtotal: kvOrder.subtotal || (kvOrder.total || 0),
+        delivery_fee: kvOrder.delivery_fee || kvOrder.deliveryFee || 0,
         status: kvOrder.status,
         payment_method: kvOrder.payment_method || kvOrder.paymentMethod,
+        delivery_method: kvOrder.delivery_method || kvOrder.deliveryMethod,
         delivery_date: kvOrder.delivery_date || kvOrder.deliveryDate,
         delivery_time: kvOrder.delivery_time || kvOrder.deliveryTime,
         notes: kvOrder.notes || '',
@@ -1950,6 +2087,8 @@ app.get("/make-server-0f4d2485/admin/orders", async (c) => {
         statusHistory: statusHistory || [],
         source: 'kv',
       };
+      
+      console.log(`[ADMIN-ORDERS] 📦 KV Order ${normalized.order_number} - Customer: ${normalized.customer?.name}, Items: ${normalized.items.length}`);
       
       return normalized;
     }));

@@ -760,7 +760,7 @@ export default function AdminOrders() {
                           </td>
                           {/* Fotoğraf */}
                           <td className="p-4">
-                            {order.items?.[0] && (
+                            {order.items?.[0] ? (
                               <div className="flex justify-center">
                                 <div className="relative group cursor-pointer">
                                   <img 
@@ -778,12 +778,18 @@ export default function AdminOrders() {
                                   )}
                                 </div>
                               </div>
+                            ) : (
+                              <div className="flex justify-center">
+                                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
+                                  <span className="text-gray-400 text-xs">Yok</span>
+                                </div>
+                              </div>
                             )}
                           </td>
                           
                           {/* Ürün Başlığı */}
                           <td className="p-4">
-                            {order.items?.[0] && (
+                            {order.items?.[0] ? (
                               <div className="min-w-0 max-w-[250px] relative group">
                                 <p 
                                   className="text-sm font-semibold text-gray-900 line-clamp-2 cursor-pointer hover:text-[#1e3a8a] transition-colors" 
@@ -811,6 +817,11 @@ export default function AdminOrders() {
                                     Toplam {order.items.length} ürün
                                   </p>
                                 )}
+                              </div>
+                            ) : (
+                              <div className="text-center">
+                                <p className="text-sm text-gray-400 italic">Ürün bilgisi yok</p>
+                                <p className="text-xs text-gray-400 mt-1">(Eski sipariş)</p>
                               </div>
                             )}
                           </td>

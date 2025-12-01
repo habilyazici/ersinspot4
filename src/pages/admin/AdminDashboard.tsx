@@ -442,66 +442,22 @@ export default function AdminDashboard() {
         </div>
 
         {/* Main Charts Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {!data ? (
-            // Skeleton Loaders for Charts
-            <>
-              <Card className="shadow-xl">
-                <CardHeader>
-                  <div className="h-6 bg-gray-200 rounded animate-pulse w-48 mb-2" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-36" />
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] bg-gray-100 rounded animate-pulse" />
-                </CardContent>
-              </Card>
-              <Card className="shadow-xl">
-                <CardHeader>
-                  <div className="h-6 bg-gray-200 rounded animate-pulse w-48 mb-2" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-36" />
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px] bg-gray-100 rounded animate-pulse" />
-                </CardContent>
-              </Card>
-            </>
+            // Skeleton Loader for Chart
+            <Card className="shadow-xl">
+              <CardHeader>
+                <div className="h-6 bg-gray-200 rounded animate-pulse w-48 mb-2" />
+                <div className="h-4 bg-gray-200 rounded animate-pulse w-36" />
+              </CardHeader>
+              <CardContent>
+                <div className="h-[300px] bg-gray-100 rounded animate-pulse" />
+              </CardContent>
+            </Card>
           ) : (
             <>
-              {/* Monthly Trend */}
-              <Card className="shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] border-t-4 border-orange-500 animate-fade-in">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-[var(--brand-orange-600)]" />
-                    Modül Bazlı Talep Trendi
-                  </CardTitle>
-                  <CardDescription>Son 6 aylık talep sayıları</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={280}>
-                    <LineChart data={data.charts.monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="month" stroke="#6b7280" />
-                  <YAxis stroke="#6b7280" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                    }}
-                  />
-                  <Legend />
-                  <Line type="monotone" dataKey="sipariş" stroke={COLORS.orange} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} />
-                  <Line type="monotone" dataKey="nakliye" stroke={COLORS.navy} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} animationBegin={100} />
-                  <Line type="monotone" dataKey="teknik servis" stroke={COLORS.teal} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} animationBegin={200} />
-                  <Line type="monotone" dataKey="ürün satış" stroke={COLORS.purple} strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} animationDuration={1000} animationBegin={300} />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
           {/* Revenue Distribution */}
-          <Card className="shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] border-t-4 border-blue-500 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+          <Card className="shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] border-t-4 border-blue-500 animate-fade-in">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieChart className="w-5 h-5 text-[var(--brand-orange-600)]" />
